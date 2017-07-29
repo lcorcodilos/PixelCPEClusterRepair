@@ -33,9 +33,10 @@
 #define BXM1 TXSIZE+3
 #define BXM2 TXSIZE+2
 #define BXM3 TXSIZE+1
-#define T2YSIZE 13
+#define T2YSIZE 17
 #define T2XSIZE 7
-#define T2HY 6  // = T2YSIZE/2
+#define T2HY 8  // = T2YSIZE/2
+#define T2HYP1 T2HY+1 // = T2YSIZE/2+1
 #define T2HX 3  // = T2XSIZE/2
 
 #endif

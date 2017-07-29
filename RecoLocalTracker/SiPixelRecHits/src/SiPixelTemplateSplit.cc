@@ -1,3 +1,4 @@
+#if 0
 //
 //  SiPixelTemplateSplit.cc (Version 2.30)
 //
@@ -1227,3 +1228,5 @@ int SiPixelTemplateSplit::PixelTempSplit(int id, float cotalpha, float cotbeta, 
 } // PixelTempSplit
 
 
+
+#endif

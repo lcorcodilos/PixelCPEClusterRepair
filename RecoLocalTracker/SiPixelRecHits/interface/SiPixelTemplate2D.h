@@ -15,8 +15,6 @@
 #ifndef SiPixelTemplate2D_h
 #define SiPixelTemplate2D_h 1
 
-#include "RecoLocalTracker/SiPixelRecHits/interface/SiPixelTemplateDefs.h"
-
 #include<vector>
 #include<cassert>
 #include "boost/multi_array.hpp"
@@ -24,6 +22,9 @@
 #ifndef SI_PIXEL_TEMPLATE_STANDALONE
 #include "CondFormats/SiPixelObjects/interface/SiPixelTemplateDBObject.h"
 #include "FWCore/Utilities/interface/Exception.h"
+#include "RecoLocalTracker/SiPixelRecHits/interface/SiPixelTemplateDefs.h"
+#else
+#include "SiPixelTemplateDefs.h"
 #endif
 
 struct SiPixelTemplateEntry2D { //!< Basic template entry corresponding to a single set of track angles
@@ -45,28 +46,34 @@ struct SiPixelTemplateEntry2D { //!< Basic template entry corresponding to a sin
    float chi2min[4];        //!< minimum of chi^2 in 4 charge bins
    float chi2avgone;        //!< average y chi^2 for 1 pixel clusters
    float chi2minone;        //!< minimum of y chi^2 for 1 pixel clusters
-   float spare[20];
+   float clsleny;           //!< cluster y-length in pixels at signal height symax/2
+   float clslenx;           //!< cluster x-length in pixels at signal height sxmax/2
+   float spare[18];
 } ;
 
 
 
 
 struct SiPixelTemplateHeader2D {           //!< template header structure
-   char title[80];         //!< template title
    int ID;                 //!< template ID number
-   int templ_version;      //!< Version number of the template to ensure code compatibility
-   float Bfield;           //!< Bfield in Tesla
-   int NTy;                //!< number of Template y entries (= 0 for 2-D templates)
+   int NTy;                //!< number of Template y entries
    int NTyx;               //!< number of Template y-slices of x entries
    int NTxx;               //!< number of Template x-entries in each slice
    int Dtype;              //!< detector type (0=BPix, 1=FPix)
+   float qscale;           //!< Charge scaling to match cmssw and pixelav
+   float lorywidth;        //!< estimate of y-lorentz width for optimal resolution
+   float lorxwidth;        //!< estimate of x-lorentz width for optimal resolution
+   float lorybias;         //!< estimate of y-lorentz bias
+   float lorxbias;         //!< estimate of x-lorentz bias
    float Vbias;            //!< detector bias potential in Volts
    float temperature;      //!< detector temperature in deg K
    float fluence;          //!< radiation fluence in n_eq/cm^2
-   float qscale;           //!< Charge scaling to match cmssw and pixelav
-   float s50;              //!< 1/2 of the readout threshold in ADC units
-   float lorywidth;        //!< estimate of y-lorentz width from single pixel offset
-   float lorxwidth;        //!< estimate of x-lorentz width from single pixel offset
+   float s50;              //!< 1/2 of the multihit dcol threshold in electrons
+   float ss50;             //!< 1/2 of the single hit dcol threshold in electrons
+   char title[80];         //!< template title
+   int templ_version;      //!< Version number of the template to ensure code compatibility
+   float Bfield;           //!< Bfield in Tesla
+   float fbin[3];          //!< The QBin definitions in Q_clus/Q_avg
    float xsize;            //!< pixel size (for future use in upgraded geometry)
    float ysize;            //!< pixel size (for future use in upgraded geometry)
    float zsize;            //!< pixel size (for future use in upgraded geometry)
@@ -76,7 +83,11 @@ struct SiPixelTemplateHeader2D {           //!< template header structure
 
 struct SiPixelTemplateStore2D { //!< template storage structure
    SiPixelTemplateHeader2D head;
-   boost::multi_array<SiPixelTemplateEntry2D,2> entry;     //!< use 2d entry to store [47][5] barrel entries or [5][9] fpix entries
+#ifndef SI_PIXEL_TEMPLATE_USE_BOOST
+   SiPixelTemplateEntry2D entry[61][5];  //!< use 2d entry to store [47][5] barrel entries or [5][9] fpix
+#else
+   boost::multi_array<SiPixelTemplateEntry2D,2> entry;  //!< use 2d entry to store [47][5] barrel entries or [5][9] fpix entries
+#endif
 } ;
 
 
@@ -105,6 +116,7 @@ struct SiPixelTemplateStore2D { //!< template storage structure
 class SiPixelTemplate2D {
 public:
    SiPixelTemplate2D(const std::vector< SiPixelTemplateStore2D > & thePixelTemp) : thePixelTemp_(thePixelTemp) {id_current_ = -1; index_id_ = -1; cota_current_ = 0.; cotb_current_ = 0.;} //!< Default constructor
+   
    static bool pushfile(int filenum, std::vector< SiPixelTemplateStore2D > & thePixelTemp_);     // load the private store with info from the
    // file with the index (int) filenum
    
@@ -112,16 +124,18 @@ public:
    static bool pushfile(const SiPixelTemplateDBObject& dbobject, std::vector< SiPixelTemplateStore2D > & thePixelTemp_);     // load the private store with info from db
 #endif
    
+   //  Initialize things before interpolating
+   
+   bool interpolate(int id, float cotalpha, float cotbeta, float locBz, float locBx);
    
    // Interpolate input alpha and beta angles to produce a working template for each individual hit.
    
-   bool xytemp(int id, float cotalpha, float cotbeta, float locBz, float xhit, float yhit, std::vector<bool>& ydouble, std::vector<bool>& xdouble, float template2d[BXM2][BYM2]);
+   // Works with Phase 0+1
+   bool xytemp(float xhit, float yhit, bool ydouble[BYM2], bool xdouble[BXM2], float template2d[BXM2][BYM2], bool dervatives, float dpdx2d[2][BXM2][BYM2]);
    
-   // Overload to allow user to avoid the locBz information
+   // Overload for backward compatibility
    
-   bool xytemp(int id, float cotalpha, float cotbeta, float xhit, float yhit, std::vector<bool>& ydouble, std::vector<bool>& xdouble, float template2d[BXM2][BYM2]);
-   
-   // Get pixel signal uncertainties
+   bool xytemp(float xhit, float yhit, bool ydouble[BYM2], bool xdouble[BXM2], float template2d[BXM2][BYM2]);
    
    void xysigma2(float qpixel, int index, float& xysig2);
    
@@ -134,13 +148,6 @@ public:
    float qscale() {return qscale_;}    //!< charge scaling factor
    float s50() {return s50_;}          //!< 1/2 of the pixel threshold signal in adc units
    float sxymax() {return sxymax_;}    //!< max pixel signal for pixel error calculation
-   float xytemp(int j, int i) {        //!< get the 2-d template for pixel j (x), i (y) in BXM2 x BYM2 array (x,y)=(0,0) in lower LH corner of pixel[1][1]
-#ifndef SI_PIXEL_TEMPLATE_STANDALONE
-      if(j < 0 || j > BXM3 || i < 0 || i > BYM3) {throw cms::Exception("DataCorrupt") << "SiPixelTemplate2D::xytemp called with illegal indices = " << j << "," << i << std::endl;}
-#else
-      assert((j>=0 && j<BYM2) && (i>=0 && i<BYM2));
-#endif
-      return xytemp_[j][i];} //!< current 2-d template
    float chi2avg(int i) {
 #ifndef SI_PIXEL_TEMPLATE_STANDALONE
       if(i < 0 || i > 3) {throw cms::Exception("DataCorrupt") << "SiPixelTemplate2D::chi2yavg called with illegal index = " << i << std::endl;}
@@ -155,10 +162,21 @@ public:
       assert(i>=0 && i<4);
 #endif
       return chi2min_[i];} //!< minimum chi^2 in 4 charge bins
+   float fbin(int i) {
+#ifndef SI_PIXEL_TEMPLATE_STANDALONE
+      if(i < 0 || i > 2) {throw cms::Exception("DataCorrupt") << "SiPixelTemplate2D::fbin called with illegal index = " << i << std::endl;}
+#else
+      assert(i>=0 && i<3);
+#endif
+      return fbin_[i];} //!< Return lower bound of Qbin definition
+   float sizex() {return clslenx_;}                             //! return x size of template cluster
+   float sizey() {return clsleny_;}                             //! return y size of template cluster
    float chi2avgone() {return chi2avgone_;}                        //!< //!< average y chi^2 for 1 pixel clusters
    float chi2minone() {return chi2minone_;}                        //!< //!< minimum of y chi^2 for 1 pixel clusters
-   float lorywidth() {return lorywidth_;}                            //!< signed lorentz y-width (microns)
-   float lorxwidth() {return lorxwidth_;}                            //!< signed lorentz x-width (microns)
+   float lorydrift() {return lorydrift_;}                            //!< signed lorentz y-width (microns)
+   float lorxdrift() {return lorxdrift_;}                            //!< signed lorentz x-width (microns)
+   float clsleny() {return clsleny_;}                                //!< cluster y-size
+   float clslenx() {return clslenx_;}                                //!< cluster x-size
    float xsize() {return xsize_;}                                    //!< pixel x-size (microns)
    float ysize() {return ysize_;}                                    //!< pixel y-size (microns)
    float zsize() {return zsize_;}                                    //!< pixel z-size or thickness (microns)
@@ -187,6 +205,12 @@ private:
    int jx0_;                  //!< index of nearest cot(alpha) bin
    int jx1_;                  //!< index of next-nearest cot(alpha) bin
    float adcota_;             //!< fractional pixel distance of cot(alpha) from jx0_
+   int imin_;                 //!< min y index of templated cluster
+   int imax_;                 //!< max y index of templated cluster
+   int jmin_;                 //!< min x index of templated cluster
+   int jmax_;                 //!< max x index of templated cluster
+   bool flip_y_;              //!< flip y sign-sensitive quantities
+   bool flip_x_;              //!< flip x sign-sensitive quantities
    bool success_;             //!< true if cotalpha, cotbeta are inside of the acceptance (dynamically loaded)
    
    
@@ -197,7 +221,7 @@ private:
    float qscale_;            //!< charge scaling factor
    float s50_;               //!< 1/2 of the pixel threshold signal in adc units
    float sxymax_;            //!< average pixel signal for y-projection of cluster
-   float xytemp_[BXM2][BYM2];//!< templates for y-reconstruction (binned over 5 central pixels)
+   float xytemp_[BXM2][BYM2];//!< template for xy-reconstruction
    float xypary0x0_[2][5];   //!< Polynomial error parameterization at ix0,iy0
    float xypary1x0_[2][5];   //!< Polynomial error parameterization at ix0,iy1
    float xypary0x1_[2][5];   //!< Polynomial error parameterization at ix1,iy0
@@ -206,11 +230,16 @@ private:
    float chi2min_[4];       //!< minimum of chi^2 in 4 charge bins
    float chi2avgone_;       //!< average chi^2 for 1 pixel clusters
    float chi2minone_;       //!< minimum of chi^2 for 1 pixel clusters
+   float clsleny_;            //!< projected y-length of cluster
+   float clslenx_;            //!< projected x-length of cluster
    float lorywidth_;         //!< Lorentz y-width (sign corrected for fpix frame)
    float lorxwidth_;         //!< Lorentz x-width
+   float lorydrift_;         //!< Lorentz y-drift
+   float lorxdrift_;         //!< Lorentz x-drift
    float xsize_;             //!< Pixel x-size
    float ysize_;             //!< Pixel y-size
    float zsize_;             //!< Pixel z-size (thickness)
+   float fbin_[3];           //!< The QBin definitions in Q_clus/Q_avg
    
    // The actual template store is a std::vector container
    
