@@ -50,7 +50,7 @@ using namespace edm;
 //! digits of filenum.
 //! \param filenum - an integer NNNN used in the filename generror_summary_zpNNNN
 //****************************************************************
-bool SiPixelGenError::pushfile(int filenum, std::vector< SiPixelGenErrorStore > & thePixelTemp_)
+bool SiPixelGenError::pushfile(int filenum, std::vector< SiPixelGenErrorStore > & thePixelTemp_ , std::string dir)
 {
    // Add info stored in external file numbered filenum to theGenErrorStore
    
@@ -71,7 +71,7 @@ bool SiPixelGenError::pushfile(int filenum, std::vector< SiPixelGenErrorStore > 
    //  Create different path in CMSSW than standalone
    
 #ifndef SI_PIXEL_TEMPLATE_STANDALONE
-   tout << "CalibTracker/SiPixelESProducers/data/generror_summary_zp"
+   tout << dir << "generror_summary_zp"
    << std::setw(4) << std::setfill('0') << std::right << filenum << ".out" << std::ends;
    std::string tempf = tout.str();
    edm::FileInPath file( tempf.c_str() );

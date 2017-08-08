@@ -239,8 +239,9 @@ class SiPixelTemplate {
 public:
    SiPixelTemplate(const std::vector< SiPixelTemplateStore > & thePixelTemp) : thePixelTemp_(thePixelTemp) { id_current_ = -1; index_id_ = -1; cota_current_ = 0.; cotb_current_ = 0.; } //!< Constructor for cases in which template store already exists
    
-   static bool pushfile(int filenum, std::vector< SiPixelTemplateStore > & thePixelTemp_);     // load the private store with info from the
-   // file with the index (int) filenum
+   // Load the private store with info from the file with the index (int) filenum from directory dir:
+   //   ${dir}template_summary_zp${filenum}.out
+   static bool pushfile(int filenum, std::vector< SiPixelTemplateStore > & thePixelTemp_ , std::string dir = "");
    
 #ifndef SI_PIXEL_TEMPLATE_STANDALONE
    static bool pushfile(const SiPixelTemplateDBObject& dbobject, std::vector< SiPixelTemplateStore > & thePixelTemp_);     // load the private store with info from db

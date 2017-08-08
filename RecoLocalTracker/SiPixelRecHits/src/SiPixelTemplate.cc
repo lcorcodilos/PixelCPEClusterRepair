@@ -119,8 +119,9 @@ using namespace edm;
 //! an external file template_summary_zpNNNN where NNNN are four
 //! digits of filenum.
 //! \param filenum - an integer NNNN used in the filename template_summary_zpNNNN
+//! \param dir - the directory where the template files live (default is "")
 //****************************************************************
-bool SiPixelTemplate::pushfile(int filenum, std::vector< SiPixelTemplateStore > & thePixelTemp_)
+bool SiPixelTemplate::pushfile(int filenum, std::vector< SiPixelTemplateStore > & thePixelTemp_ , std::string dir)
 {
    // Add template stored in external file numbered filenum to theTemplateStore
    
@@ -141,8 +142,8 @@ bool SiPixelTemplate::pushfile(int filenum, std::vector< SiPixelTemplateStore > 
    //  Create different path in CMSSW than standalone
    
 #ifndef SI_PIXEL_TEMPLATE_STANDALONE
-   tout << "CalibTracker/SiPixelESProducers/data/template_summary_zp"
-   << std::setw(4) << std::setfill('0') << std::right << filenum << ".out" << std::ends;
+   tout << dir << "template_summary_zp"
+	<< std::setw(4) << std::setfill('0') << std::right << filenum << ".out" << std::ends;
    std::string tempf = tout.str();
    edm::FileInPath file( tempf.c_str() );
    tempfile = (file.fullPath()).c_str();
